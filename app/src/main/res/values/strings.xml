@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AndroidAudioRecoder</string>
+    <string name="record">record</string>
+    <string name="stop">stop</string>
+</resources>
