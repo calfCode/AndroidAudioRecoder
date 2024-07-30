@@ -25,7 +25,9 @@ import java.util.TimerTask;
 import android.Manifest;
 
 public class MainActivity extends AppCompatActivity {
-
+    static {
+        System.loadLibrary("androidaudiorecoder");
+    }
     private TextView recorder_time_tip;
     private Button recorder_btn;
     private static final int DISPLAY_RECORDING_TIME_FLAG = 100000;
@@ -34,7 +36,8 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isRecording = false;
     private AudioRecordRecorderService recorderService;
-    private String outputPath = "/mnt/sdcard/vocal.pcm";
+    private String outputPCMPath = "/mnt/sdcard/vocal.pcm";
+    private String outputAACPath;
     private Timer timer;
     private int recordingTimeInSecs = 0;
     private TimerTask displayRecordingTimeTask;
@@ -51,15 +54,15 @@ public class MainActivity extends AppCompatActivity {
         });
         String appFilePath =  Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)+File.separator;
         Log.d(TAG,"appFilePath="+appFilePath);
-        outputPath = appFilePath+"2.pcm";
-        Log.d(TAG,"outputPath="+outputPath);
+        outputPCMPath = appFilePath+"2.pcm";
+        Log.d(TAG,"outputPath="+ outputPCMPath);
         recorder_time_tip = (TextView) findViewById(R.id.recorder_time_tip);
         recorder_btn = (Button) findViewById(R.id.recorder_btn);
         String timeTip = "00:00";
         recorder_time_tip.setText(timeTip);
         verifyAudioPermissions(this);
         bindListener();
-
+        outputAACPath = appFilePath+"2.aac";
 
     }
 
@@ -72,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
                     recorder_btn.setText(getString(record));
                     recordingTimeInSecs = 0;
                     recorderService.stop();
+                    AudioEncoder audioEncoder = new AudioEncoder();
+                    audioEncoder.encode(outputPCMPath,2,128 * 1024,48000,outputAACPath);
                     mHandler.sendEmptyMessage(DISPLAY_RECORDING_TIME_FLAG);
                     displayRecordingTimeTask.cancel();
                     timer.cancel();
@@ -82,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
                     recorderService = AudioRecordRecorderService.getInstance();
                     try {
                         recorderService.initMetaData();
-                        recorderService.start(outputPath);
+                        recorderService.start(outputPCMPath);
                         //启动一个定时器来监测时间
                         recordingTimeInSecs = 0;
                         timer = new Timer();
