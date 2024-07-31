@@ -35,7 +35,7 @@ private:
 	bool isWriteHeaderSuccess;
 	double duration;
 
-	FILE* testFile;
+	FILE* testFile=NULL;
 
 	AVFrame *input_frame;
 	int buffer_size;

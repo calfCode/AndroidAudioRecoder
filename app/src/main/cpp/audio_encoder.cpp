@@ -10,10 +10,11 @@ AudioEncoder::~AudioEncoder() {
 
 int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 	AVCodec *codec;
-	testFile = fopen("/storage/emulated/0/Download/xiaokai.aac", "wb+");
+//	testFile = fopen("/storage/emulated/0/Download/xiaokai.aac", "wb+");
 	AVSampleFormat preferedSampleFMT = AV_SAMPLE_FMT_S16;
 	int preferedChannels = audioChannels;
 	int preferedSampleRate = audioSampleRate;
+    // 为AVFormatContext上下文填充一轨AVStream
 	audioStream = avformat_new_stream(avFormatContext, NULL);
 	audioStream->id = 1;
 	avCodecContext = audioStream->codec;
@@ -24,8 +25,10 @@ int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 	} else {
 		avCodecContext->bit_rate = PUBLISH_BITE_RATE;
 	}
+    // 代表了如何数字化表示采样，使用的是AV_SAMPLE_FMT_S16，即用一个short来表示一个采样点
 	avCodecContext->sample_fmt = preferedSampleFMT;
 	LOGI("audioChannels is %d", audioChannels);
+    //channel_layout（其表示的意义与channels是一样的，只不过可选值是两个常量，分别是AV_CH_LAYOUT_MONO代表单声道、AV_CH_LAYOUT_STEREO代表立体声
 	avCodecContext->channel_layout = preferedChannels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
 	avCodecContext->channels = av_get_channel_layout_nb_channels(avCodecContext->channel_layout);
 	/** FF_PROFILE_AAC_LOW;FF_PROFILE_AAC_HE;FF_PROFILE_AAC_HE_V2 **/
@@ -35,6 +38,7 @@ int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 
     /* find the MP3 encoder */
 //    codec = avcodec_find_encoder(AV_CODEC_ID_MP3);
+//找出对应的编码器
 	codec = avcodec_find_encoder_by_name(codec_name);
 	if (!codec) {
 		LOGI("Couldn't find a valid audio codec");
@@ -92,6 +96,7 @@ int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 			return -1;
 		}
 	}
+    //为该编码器上下文打开这个编码器
 	if (avcodec_open2(avCodecContext, codec, NULL) < 0) {
 		LOGI("Couldn't open codec");
 		return -2;
@@ -189,6 +194,7 @@ int AudioEncoder::init(int bitRate, int channels, int sampleRate, int bitsPerSam
 
 	avFormatContext = avformat_alloc_context();
 	LOGI("aacFilePath is %s ", aacFilePath);
+    // 关联输出文件到AVFormatContext
 	if ((ret = avformat_alloc_output_context2(&avFormatContext, NULL, NULL, aacFilePath)) != 0) {
 		LOGI("avFormatContext   alloc   failed : %s", av_err2str(ret));
 		return -1;
@@ -199,16 +205,18 @@ int AudioEncoder::init(int bitRate, int channels, int sampleRate, int bitsPerSam
 	 * encoding: set by the user before avformat_write_header() (mainly useful for AVFMT_NOFILE formats).
 	 * The callback should also be passed to avio_open2() if it's used to open the file.
 	 */
+	 //相当于打开文件连接通道
 	if (ret = avio_open2(&avFormatContext->pb, aacFilePath, AVIO_FLAG_WRITE, NULL, NULL)) {
 		LOGI("Could not avio open fail %s", av_err2str(ret));
 		return -1;
 	}
-
+    //
 	this->alloc_audio_stream(codec_name);
 //	this->alloc_audio_stream("libfaac");
 //	this->alloc_audio_stream("libvo_aacenc");
 	av_dump_format(avFormatContext, 0, aacFilePath, 1);
 	// write header
+    //将该音频文件的Header部分写进去
 	if (avformat_write_header(avFormatContext, NULL) != 0) {
 		LOGI("Could not write header\n");
 		return -1;
@@ -273,7 +281,7 @@ void AudioEncoder::encodePacket() {
 		return;
 	}
 	if (got_output) {
-		this->writeAACPakcetToFile(pkt.data, pkt.size);
+//		this->writeAACPakcetToFile(pkt.data, pkt.size);
 		if (avCodecContext->coded_frame && avCodecContext->coded_frame->pts != AV_NOPTS_VALUE)
 			pkt.pts = av_rescale_q(avCodecContext->coded_frame->pts, avCodecContext->time_base, audioStream->time_base);
 		pkt.flags |= AV_PKT_FLAG_KEY;
